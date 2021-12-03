@@ -1,6 +1,8 @@
 package linda.test;
 
+import linda.shm.*;
 import linda.*;
+import java.util.Collection;
 
 public class BasicTest1 {
 
@@ -12,13 +14,23 @@ public class BasicTest1 {
         new Thread() {
             public void run() {
                 try {
-                    Thread.sleep(2);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                Tuple motif = new Tuple(Integer.class, String.class);
-                Tuple res = linda.take(motif);
-                System.out.println("(1) Resultat:" + res);
+                Tuple motif = new Tuple(Integer.class, Integer.class);
+                Collection<Tuple> res = linda.readAll(motif);
+                for (Tuple t : res) {
+                    System.out.println("(1) Resultat:" + t);
+                }
+                res = linda.takeAll(motif);
+                for (Tuple t : res) {
+                    System.out.println("(1) Resultat:" + t);
+                }
+                res = linda.readAll(motif);
+                for (Tuple t : res) {
+                    System.out.println("(1) Resultat:" + t);
+                }
                 linda.debug("(1)");
             }
         }.start();
@@ -26,7 +38,7 @@ public class BasicTest1 {
         new Thread() {
             public void run() {
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(3);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
