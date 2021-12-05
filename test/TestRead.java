@@ -2,7 +2,7 @@ package linda.test;
 
 import linda.*;
 
-public class BasicTest2 {
+public class TestRead {
 
     public static void main(String[] a) {
         final Linda linda = new linda.shm.CentralizedLinda();
@@ -18,9 +18,8 @@ public class BasicTest2 {
                         e.printStackTrace();
                     }
                     Tuple motif = new Tuple(Integer.class, String.class);
-                    Tuple res = linda.tryRead(motif);
+                    Tuple res = linda.read(motif);
                     System.out.println("("+j+") Resultat:" + res);
-                    linda.debug("("+j+")");
                 }
             }.start();
         }
@@ -41,14 +40,14 @@ public class BasicTest2 {
                 System.out.println("(0) write: " + t2);
                 linda.write(t2);
 
-                linda.debug("(0)");
-
                 Tuple t3 = new Tuple(4, "foo");
                 System.out.println("(0) write: " + t3);
                 linda.write(t3);
-                                
-                linda.debug("(0)");
 
+                Tuple t4 = new Tuple(9, "loo");
+                System.out.println("(0) write: " + t4);
+                linda.write(t4);
+                                
             }
         }.start();
                 
