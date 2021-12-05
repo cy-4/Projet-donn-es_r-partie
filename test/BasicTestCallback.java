@@ -26,6 +26,9 @@ public class BasicTestCallback {
         linda = new linda.shm.CentralizedLinda();
         // linda = new linda.server.LindaClient("//localhost:4000/MonServeur");
 
+        Tuple t0 = new Tuple(4, "foo");
+        System.out.println("(2) write: " + t0);
+        linda.write(t0);
         cbmotif = new Tuple(Integer.class, String.class);
         linda.eventRegister(eventMode.TAKE, eventTiming.IMMEDIATE, cbmotif, new MyCallback());
 
