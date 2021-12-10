@@ -282,6 +282,9 @@ public class CentralizedLinda implements Linda {
     }
 
     public void eventRegister(eventMode mode, eventTiming timing, Tuple template, Callback callback){
+        new Thread(){
+        public void run(){
+        try{ 
         if (timing==eventTiming.IMMEDIATE){
             this.mon_moniteur.lock();
             if (mode==eventMode.READ){
@@ -445,6 +448,12 @@ public class CentralizedLinda implements Linda {
                 }
         }
     }
+    catch (InterruptedException e) {
+    e.printStackTrace();
+}
+    }
+    }.start();
+}
 
     public void debug(String prefix){
         System.out.println(prefix);
