@@ -45,6 +45,10 @@ public class BasicTestCallback {
         System.out.println("(2) write: " + t3);
         linda.write(t3);
 
+        Tuple t4 = new Tuple(987, "foo");
+        System.out.println("(2) write: " + t4);
+        linda.write(t4);
+
         linda.debug("(2)");
 
     }

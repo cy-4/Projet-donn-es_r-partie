@@ -283,177 +283,58 @@ public class CentralizedLinda implements Linda {
 
     public void eventRegister(eventMode mode, eventTiming timing, Tuple template, Callback callback){
         new Thread(){
-        public void run(){
-        try{ 
+            public void run(){
         if (timing==eventTiming.IMMEDIATE){
-            this.mon_moniteur.lock();
             if (mode==eventMode.READ){
-                while(this.manipulee || this.nbLectures > this.seuilEquite){
-                    this.nbLecteurAttente ++;
-                    try{
-                        this.Lp.await();
-                    }
-                    catch (Exception e){
-                        e.printStackTrace();
-                    }
-                    this.nbLecteurAttente --;
- 
+                Tuple tupletrouve= tryRead(template);
+                if (tupletrouve!=null){
+                    callback.call(tupletrouve);
                 }
-                this.nbLecteur ++;
-                for (int i=0; i<this.listTuple.size(); i++) {
-                    Tuple tuplei = this.listTuple.get(i);
-                    if (tuplei.matches(template)) {
-                        this.nbLecteur --;
-                        if (this.nbLecteurAttente == 0) {
-                            Ep.signal();
-                        } else {
-                            Lp.signal();
-                        }
-                        mon_moniteur.unlock();
-                        callback.call(tuplei);
-                        return;
-                    }
-                }
-                this.nbLecteur --;
-                if (this.nbLecteurAttente == 0) {
-                    Ep.signal();
-                } else {
-                    Lp.signal();
-                }
-                this.mon_moniteur.unlock();
             }
             else{
-                while (this.nbLecteur != 0 || (this.nbLecteurAttente != 0 && this.nbLectures < this.seuilEquite) || this.manipulee) {
-                    try{
-                        Ep.await();
-                    }
-                    catch (Exception e){
-                        e.printStackTrace();
-                    }
-                }
-                this.manipulee = true ; 
-                for (int i=0; i<this.listTuple.size(); i++) {
-                    Tuple tuplei = this.listTuple.get(i);
-                    if (tuplei.matches(template)) {
-                        this.listTuple.remove(i);
-                        this.nbLectures = 0;
-                        this.manipulee = false;
-                        if (this.nbLecteurAttente == 0) {
-                            Ep.signal();
-                        } else {
-                            Lp.signal();
-                        }
-                        mon_moniteur.unlock();
-                        callback.call(tuplei);
-                        return;
-                    }
-                }
-                this.manipulee = false ;
-                if (this.nbLecteurAttente == 0) {
-                    Ep.signal();
-                } else {
-                    Lp.signal();
-                }
-                mon_moniteur.unlock();
-                }         
+                Tuple tupletrouve= tryTake(template);
+                if (tupletrouve!=null){
+                    take(template);
+                    callback.call(tupletrouve);  
+                }  
+            }  
         }
         if (mode==eventMode.READ){
             while(true){
-                this.mon_moniteur.lock();
+                mon_moniteur.lock();
                 try{
                     newTuple.await();
                 }
                 catch (Exception e){
                     e.printStackTrace();
-                }     
-                while (this.manipulee || this.nbLectures > this.seuilEquite) {
-                    this.nbLecteurAttente ++;
-                    try{
-                        this.Lp.await();
-                    }
-                    catch (Exception e){
-                        e.printStackTrace();
-                    }
-                    this.nbLecteurAttente --;
                 }
-                this.nbLectures ++;
-                this.nbLecteur ++;
-                for (int i=0; i<this.listTuple.size(); i++) {
-                    Tuple tuplei = this.listTuple.get(i);
-                    if (tuplei.matches(template)) {
-                        this.nbLecteur --;
-                        if (this.nbLecteurAttente == 0) {
-                            Ep.signal();
-                        } else {
-                            Lp.signal();
-                        }
-                        mon_moniteur.unlock();
-                        callback.call(tuplei);
-                        return;
-                    }
-                }
-                this.nbLecteur --;
-                if (this.nbLecteurAttente == 0) {
-                    Ep.signal();
-                } else {
-                    Lp.signal();
-                }
-                this.mon_moniteur.unlock();
+                Tuple tupletrouve= tryRead(template);
+                if (tupletrouve!=null){
+                    callback.call(tupletrouve);
+                }   
+                mon_moniteur.unlock();
             }
         }
         else{
             while(true){
-                this.mon_moniteur.lock();
+                mon_moniteur.lock();
                 try{
-                    System.out.println("je suis bloqué");
                     newTuple.await();
                 }
                 catch (Exception e){
                     e.printStackTrace();
                 }
-                System.out.println("je suis sortie");
-                mon_moniteur.lock();
-                while (this.nbLecteur != 0 || (this.nbLecteurAttente != 0 && this.nbLectures < this.seuilEquite) || this.manipulee) {
-                    try{
-                        Ep.await();
-                    }
-                    catch (Exception e){
-                        e.printStackTrace();
-                    }
-                }
-                this.manipulee = true ; 
-                for (int i=0; i<this.listTuple.size(); i++) {
-                    Tuple tuplei = this.listTuple.get(i);
-                    if (tuplei.matches(template)) {
-                        this.listTuple.remove(i);
-                        this.nbLectures = 0;
-                        this.manipulee = false;
-                        if (this.nbLecteurAttente == 0) {
-                            Ep.signal();
-                        } else {
-                            Lp.signal();
-                        }
-                        mon_moniteur.unlock();
-                        callback.call(tuplei);
-                        return;
-                    }
-                }
-                this.manipulee = false ;
-                if (this.nbLecteurAttente == 0) {
-                    Ep.signal();
-                } else {
-                    Lp.signal();
+                Tuple tupletrouve= tryTake(template);
+                if (tupletrouve!=null){
+                    take(template);
+                    callback.call(tupletrouve);
                 }
                 mon_moniteur.unlock();
-                }
+            }
         }
+        }
+        }.start();
     }
-    catch (InterruptedException e) {
-    e.printStackTrace();
-}
-    }
-    }.start();
-}
 
     public void debug(String prefix){
         System.out.println(prefix);
