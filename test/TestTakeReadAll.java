@@ -42,7 +42,7 @@ public class TestTakeReadAll {
         new Thread() {
             public void run() {
                 try {
-                    Thread.sleep(3);
+                    Thread.sleep(1);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -60,8 +60,9 @@ public class TestTakeReadAll {
                 linda.write(t2);
 
                 Tuple t3 = new Tuple(4, "foo");
-                System.out.println("(2) write: " + t3);
                 linda.write(t3);
+                System.out.println("(2) write: " + t3);
+                
                                 
             }
         }.start();

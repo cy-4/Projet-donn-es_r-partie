@@ -66,17 +66,28 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
     }
 
     @Override
-    public Tuple take(Tuple template) throws RemoteException {
+    public Tuple take(Tuple template) throws RemoteException{
         while (true) {
             synchronized(listeTuples) {
                 for (Tuple t : this.listeTuples) {
                     if (t.matches(template)) {
+                        if (this.mutex.getQueueLength()>0){
+                            this.mutex.release();
+                        }
                         this.listeTuples.remove(t);
                         return t;
                     }
                 }
             }
             try {
+                if (this.mutex.getQueueLength()>0){
+                    this.mutex.release();
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
                 this.mutex.acquire();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -90,11 +101,22 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
             synchronized(listeTuples) {
                 for (Tuple t : this.listeTuples) {
                     if (t.matches(template)) {
+                        if (this.mutex.getQueueLength()>0){
+                            this.mutex.release();
+                        }
                         return t;
                     }
                 }
             }
             try {
+                if (this.mutex.getQueueLength()>0){
+                    this.mutex.release();
+                    try {
+                        Thread.sleep(2);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
                 this.mutex.acquire();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -128,15 +150,12 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
     }
 
     @Override
-    public Collection<Tuple> takeAll(Tuple template) throws RemoteException {
+    public Collection<Tuple> takeAll(Tuple template) throws RemoteException{
         LinkedList<Tuple> l = new LinkedList<>();
-        synchronized(listeTuples) {
-            for (Tuple t : this.listeTuples) {
-                if (t.matches(template)) {
-                    this.listeTuples.remove(t);
-                    l.add(t);
-                }
-            }
+        Tuple tuple = tryTake(template);
+        while(tuple!=null){
+            l.add(tuple);
+            tuple = tryTake(template);
         }
         return l;
     }

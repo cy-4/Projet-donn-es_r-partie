@@ -30,30 +30,32 @@ public class CentralizedLinda implements Linda {
     public void write(Tuple t) {
         synchronized(listeTuples) {
             this.listeTuples.add(t);
-            for (Tuple template : this.callbackRead.keySet()) {
-                if (t.matches(template)){
-                    for (Callback cb : this.callbackRead.get(template)) {
-                        Tuple t2 = this.tryRead(template);
-                        if (t2 != null) {
-                            cb.call(t2);
-                            this.callbackRead.get(template).remove(cb);
-                        }
-                    }
-                }
-            }
-            for (Tuple template : this.callbackTake.keySet()) {
-                if (t.matches(template)){
-                    for (Callback cb : this.callbackTake.get(template)) {
-                        Tuple t2 = this.tryTake(template);
-                        if (t2 != null) {
-                            cb.call(t2);
-                            this.callbackTake.get(template).remove(cb);
-                        }
+        }
+        for (Tuple template : this.callbackRead.keySet()) {
+            if (t.matches(template)){
+                for (Callback cb : this.callbackRead.get(template)) {
+                    Tuple t2 = this.tryRead(template);
+                    if (t2 != null) {
+                        cb.call(t2);
+                        this.callbackRead.get(template).remove(cb);
                     }
                 }
             }
         }
-        this.mutex.release();
+        for (Tuple template : this.callbackTake.keySet()) {
+            if (t.matches(template)){
+                for (Callback cb : this.callbackTake.get(template)) {
+                    Tuple t2 = this.tryTake(template);
+                    if (t2 != null) {
+                        cb.call(t2);
+                        this.callbackTake.get(template).remove(cb);
+                    }
+                }
+            }
+        }
+        if (this.mutex.getQueueLength()>0){
+            this.mutex.release();
+        }
     }
 
     @Override
@@ -62,12 +64,23 @@ public class CentralizedLinda implements Linda {
             synchronized(listeTuples) {
                 for (Tuple t : this.listeTuples) {
                     if (t.matches(template)) {
+                        if (this.mutex.getQueueLength()>0){
+                            this.mutex.release();
+                        }
                         this.listeTuples.remove(t);
                         return t;
                     }
                 }
             }
             try {
+                if (this.mutex.getQueueLength()>0){
+                    this.mutex.release();
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
                 this.mutex.acquire();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -81,11 +94,22 @@ public class CentralizedLinda implements Linda {
             synchronized(listeTuples) {
                 for (Tuple t : this.listeTuples) {
                     if (t.matches(template)) {
+                        if (this.mutex.getQueueLength()>0){
+                            this.mutex.release();
+                        }
                         return t;
                     }
                 }
             }
             try {
+                if (this.mutex.getQueueLength()>0){
+                    this.mutex.release();
+                    try {
+                        Thread.sleep(2);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
                 this.mutex.acquire();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -121,13 +145,10 @@ public class CentralizedLinda implements Linda {
     @Override
     public Collection<Tuple> takeAll(Tuple template) {
         LinkedList<Tuple> l = new LinkedList<>();
-        synchronized(listeTuples) {
-            for (Tuple t : this.listeTuples) {
-                if (t.matches(template)) {
-                    this.listeTuples.remove(t);
-                    l.add(t);
-                }
-            }
+        Tuple tuple = tryTake(template);
+        while(tuple!=null){
+            l.add(tuple);
+            tuple = tryTake(template);
         }
         return l;
     }
