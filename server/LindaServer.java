@@ -1,5 +1,10 @@
-package linda.shm;
+package linda.server;
 
+import java.net.MalformedURLException;
+import java.rmi.Naming;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -9,25 +14,29 @@ import java.util.Map;
 import java.util.concurrent.Semaphore;
 
 import linda.Callback;
-import linda.Linda;
 import linda.Tuple;
+import linda.Linda.eventMode;
+import linda.Linda.eventTiming;
 
-public class CentralizedLinda implements Linda {
+public class LindaServer extends UnicastRemoteObject implements LindaReparti {
     
     private List<Tuple> listeTuples;
     private Map<Tuple, List<Callback>> callbackRead;
     private Map<Tuple, List<Callback>> callbackTake;
     private Semaphore mutex;
 
-    public CentralizedLinda() {
-        this.listeTuples = Collections.synchronizedList(new LinkedList<>());
+    public LindaServer(String serveurUrl) throws RemoteException, MalformedURLException {
+        LocateRegistry.createRegistry(4000);
+        Naming.rebind(serveurUrl, this);
         this.callbackRead = new HashMap<>();
         this.callbackTake = new HashMap<>();
+        this.listeTuples = Collections.synchronizedList(new LinkedList<>());
         this.mutex = new Semaphore(0);
     }
 
+
     @Override
-    public void write(Tuple t) {
+    public void write(Tuple t) throws RemoteException {
         synchronized(listeTuples) {
             this.listeTuples.add(t);
             for (Tuple template : this.callbackRead.keySet()) {
@@ -57,7 +66,7 @@ public class CentralizedLinda implements Linda {
     }
 
     @Override
-    public Tuple take(Tuple template) {
+    public Tuple take(Tuple template) throws RemoteException {
         while (true) {
             synchronized(listeTuples) {
                 for (Tuple t : this.listeTuples) {
@@ -76,7 +85,7 @@ public class CentralizedLinda implements Linda {
     }
 
     @Override
-    public Tuple read(Tuple template) {
+    public Tuple read(Tuple template) throws RemoteException {
         while (true) {
             synchronized(listeTuples) {
                 for (Tuple t : this.listeTuples) {
@@ -94,7 +103,7 @@ public class CentralizedLinda implements Linda {
     }
 
     @Override
-    public Tuple tryTake(Tuple template) {
+    public Tuple tryTake(Tuple template) throws RemoteException {
         synchronized(listeTuples) {
             for (Tuple t : this.listeTuples) {
                 if (t.matches(template)) {
@@ -107,7 +116,7 @@ public class CentralizedLinda implements Linda {
     }
 
     @Override
-    public Tuple tryRead(Tuple template) {
+    public Tuple tryRead(Tuple template) throws RemoteException {
         synchronized(listeTuples) {
             for (Tuple t : this.listeTuples) {
                 if (t.matches(template)) {
@@ -119,7 +128,7 @@ public class CentralizedLinda implements Linda {
     }
 
     @Override
-    public Collection<Tuple> takeAll(Tuple template) {
+    public Collection<Tuple> takeAll(Tuple template) throws RemoteException {
         LinkedList<Tuple> l = new LinkedList<>();
         synchronized(listeTuples) {
             for (Tuple t : this.listeTuples) {
@@ -133,7 +142,7 @@ public class CentralizedLinda implements Linda {
     }
 
     @Override
-    public Collection<Tuple> readAll(Tuple template) {
+    public Collection<Tuple> readAll(Tuple template) throws RemoteException {
         LinkedList<Tuple> l = new LinkedList<>();
         synchronized(listeTuples) {
             for (Tuple t : this.listeTuples) {
@@ -146,7 +155,7 @@ public class CentralizedLinda implements Linda {
     }
 
     @Override
-    public void eventRegister(eventMode mode, eventTiming timing, Tuple template, Callback callback) {
+    public void eventRegister(eventMode mode, eventTiming timing, Tuple template, Callback callback) throws RemoteException {
         if (timing == eventTiming.IMMEDIATE) {
             if (mode == eventMode.READ) {
                 Tuple t = this.tryRead(template);
@@ -173,9 +182,20 @@ public class CentralizedLinda implements Linda {
     }
 
     @Override
-    public void debug(String prefix) {
+    public void debug(String prefix) throws RemoteException {
         // TODO Auto-generated method stub
         
     }
 
+
+    public static void main(String[] args) throws RemoteException {
+        try {
+            new LindaServer(args[0]);
+        } catch (RemoteException | MalformedURLException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        while (true) {
+        }
+    }
 }
