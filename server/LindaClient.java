@@ -13,7 +13,7 @@ import linda.Tuple;
 /** Client part of a client/server implementation of Linda.
  * It implements the Linda interface and propagates everything to the server it is connected to.
  * */
-public class LindaClient implements Linda, Callback2 {
+public class LindaClient implements Linda {
 	
     private LindaReparti serveur;
 
@@ -108,7 +108,7 @@ public class LindaClient implements Linda, Callback2 {
     @Override
     public void eventRegister(eventMode mode, eventTiming timing, Tuple template, Callback callback) {
         try {
-            this.serveur.eventRegister(mode, timing, template, (Callback2) callback);
+            this.serveur.eventRegister(mode, timing, template, new Callback2(callback));
         } catch (RemoteException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -129,10 +129,5 @@ public class LindaClient implements Linda, Callback2 {
         while (true) {
             new LindaClient(args[0]);
         }
-    }
-
-    @Override
-    public void call(Tuple t) {
-        System.out.println("Tuple reçu : " + t);
     }
 }

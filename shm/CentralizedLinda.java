@@ -21,39 +21,43 @@ public class CentralizedLinda implements Linda {
 
     public CentralizedLinda() {
         this.listeTuples = Collections.synchronizedList(new LinkedList<>());
-        this.callbackRead = new HashMap<>();
-        this.callbackTake = new HashMap<>();
+        this.callbackRead = Collections.synchronizedMap(new HashMap<>());
+        this.callbackTake = Collections.synchronizedMap(new HashMap<>());
         this.mutex = new Semaphore(0);
     }
 
     @Override
     public void write(Tuple t) {
-        synchronized(listeTuples) {
+        synchronized(this.listeTuples) {
             this.listeTuples.add(t);
         }
-        for (Tuple template : this.callbackRead.keySet()) {
-            if (t.matches(template)){
-                for (Callback cb : this.callbackRead.get(template)) {
-                    Tuple t2 = this.tryRead(template);
-                    if (t2 != null) {
-                        cb.call(t2);
-                        this.callbackRead.get(template).remove(cb);
+        synchronized(this.callbackRead) {
+            for (Tuple template : this.callbackRead.keySet()) {
+                if (t.matches(template)){
+                    for (Callback cb : this.callbackRead.get(template)) {
+                        Tuple t2 = this.tryRead(template);
+                        if (t2 != null) {
+                            cb.call(t2);
+                            this.callbackRead.get(template).remove(cb);
+                        }
                     }
                 }
             }
         }
-        for (Tuple template : this.callbackTake.keySet()) {
-            if (t.matches(template)){
-                for (Callback cb : this.callbackTake.get(template)) {
-                    Tuple t2 = this.tryTake(template);
-                    if (t2 != null) {
-                        cb.call(t2);
-                        this.callbackTake.get(template).remove(cb);
+        synchronized(this.callbackTake) {
+            for (Tuple template : this.callbackTake.keySet()) {
+                if (t.matches(template)){
+                    for (Callback cb : this.callbackTake.get(template)) {
+                        Tuple t2 = this.tryTake(template);
+                        if (t2 != null) {
+                            cb.call(t2);
+                            this.callbackTake.get(template).remove(cb);
+                        }
                     }
                 }
             }
         }
-        if (this.mutex.getQueueLength()>0){
+        if (this.mutex.hasQueuedThreads()) {
             this.mutex.release();
         }
     }
@@ -64,7 +68,7 @@ public class CentralizedLinda implements Linda {
             synchronized(listeTuples) {
                 for (Tuple t : this.listeTuples) {
                     if (t.matches(template)) {
-                        if (this.mutex.getQueueLength()>0){
+                        if (this.mutex.hasQueuedThreads()) {
                             this.mutex.release();
                         }
                         this.listeTuples.remove(t);
@@ -73,7 +77,7 @@ public class CentralizedLinda implements Linda {
                 }
             }
             try {
-                if (this.mutex.getQueueLength()>0){
+                if (this.mutex.hasQueuedThreads()) {
                     this.mutex.release();
                     try {
                         Thread.sleep(1);
@@ -94,7 +98,7 @@ public class CentralizedLinda implements Linda {
             synchronized(listeTuples) {
                 for (Tuple t : this.listeTuples) {
                     if (t.matches(template)) {
-                        if (this.mutex.getQueueLength()>0){
+                        if (this.mutex.hasQueuedThreads()) {
                             this.mutex.release();
                         }
                         return t;
@@ -102,7 +106,7 @@ public class CentralizedLinda implements Linda {
                 }
             }
             try {
-                if (this.mutex.getQueueLength()>0){
+                if (this.mutex.hasQueuedThreads()) {
                     this.mutex.release();
                     try {
                         Thread.sleep(2);
@@ -174,29 +178,60 @@ public class CentralizedLinda implements Linda {
                 if (t != null) {
                     callback.call(t);
                 } else {
-                    this.callbackRead.get(template).add(callback);
+                    synchronized(this.callbackRead) {    
+                        if (this.callbackRead.get(template) == null) {
+                            List<Callback> l = new LinkedList<>();
+                            l.add(callback);
+                            this.callbackRead.put(template, l);
+                        } else {
+                            this.callbackRead.get(template).add(callback);
+                        }
+                    }
                 }
             } else {
                 Tuple t = this.tryTake(template);
                 if (t != null) {
                     callback.call(t);
                 } else {
-                    this.callbackTake.get(template).add(callback);
+                    synchronized(this.callbackTake) {  
+                        if (this.callbackTake.get(template) == null) {
+                            List<Callback> l = new LinkedList<>();
+                            l.add(callback);
+                            this.callbackTake.put(template, l);
+                        } else {
+                            this.callbackTake.get(template).add(callback);
+                        }
+                    }
                 }
             }
         } else {
             if (mode == eventMode.READ) {
-                this.callbackRead.get(template).add(callback);
+                synchronized(this.callbackRead) {  
+                    if (this.callbackRead.get(template) == null) {
+                        List<Callback> l = new LinkedList<>();
+                        l.add(callback);
+                        this.callbackRead.put(template, l);
+                    } else {
+                        this.callbackRead.get(template).add(callback);
+                    }
+                }
             } else {
-                this.callbackTake.get(template).add(callback);
+                synchronized(this.callbackTake) {  
+                    if (this.callbackTake.get(template) == null) {
+                        List<Callback> l = new LinkedList<>();
+                        l.add(callback);
+                        this.callbackTake.put(template, l);
+                    } else {
+                        this.callbackTake.get(template).add(callback);
+                    }
+                }
             }
         }
     }
 
     @Override
     public void debug(String prefix) {
-        // TODO Auto-generated method stub
-        
+        System.out.println(prefix);        
     }
 
 }

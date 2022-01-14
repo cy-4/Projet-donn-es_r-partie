@@ -28,17 +28,19 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
     public LindaServer(String serveurUrl) throws RemoteException, MalformedURLException {
         LocateRegistry.createRegistry(4000);
         Naming.rebind(serveurUrl, this);
-        this.callbackRead = new HashMap<>();
-        this.callbackTake = new HashMap<>();
+        this.callbackRead = Collections.synchronizedMap(new HashMap<>());
+        this.callbackTake = Collections.synchronizedMap(new HashMap<>());
         this.listeTuples = Collections.synchronizedList(new LinkedList<>());
         this.mutex = new Semaphore(0);
     }
 
 
     @Override
-    public void write(Tuple t) throws RemoteException {
-        synchronized(listeTuples) {
+    public void write(Tuple t) {
+        synchronized(this.listeTuples) {
             this.listeTuples.add(t);
+        }
+        synchronized(this.callbackRead) {
             for (Tuple template : this.callbackRead.keySet()) {
                 if (t.matches(template)){
                     for (Callback cb : this.callbackRead.get(template)) {
@@ -50,6 +52,8 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
                     }
                 }
             }
+        }
+        synchronized(this.callbackTake) {
             for (Tuple template : this.callbackTake.keySet()) {
                 if (t.matches(template)){
                     for (Callback cb : this.callbackTake.get(template)) {
@@ -62,16 +66,18 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
                 }
             }
         }
-        this.mutex.release();
+        if (this.mutex.hasQueuedThreads()) {
+            this.mutex.release();
+        }
     }
 
     @Override
-    public Tuple take(Tuple template) throws RemoteException{
+    public Tuple take(Tuple template) {
         while (true) {
             synchronized(listeTuples) {
                 for (Tuple t : this.listeTuples) {
                     if (t.matches(template)) {
-                        if (this.mutex.getQueueLength()>0){
+                        if (this.mutex.hasQueuedThreads()) {
                             this.mutex.release();
                         }
                         this.listeTuples.remove(t);
@@ -80,7 +86,7 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
                 }
             }
             try {
-                if (this.mutex.getQueueLength()>0){
+                if (this.mutex.hasQueuedThreads()) {
                     this.mutex.release();
                     try {
                         Thread.sleep(1);
@@ -96,12 +102,12 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
     }
 
     @Override
-    public Tuple read(Tuple template) throws RemoteException {
+    public Tuple read(Tuple template) {
         while (true) {
             synchronized(listeTuples) {
                 for (Tuple t : this.listeTuples) {
                     if (t.matches(template)) {
-                        if (this.mutex.getQueueLength()>0){
+                        if (this.mutex.hasQueuedThreads()) {
                             this.mutex.release();
                         }
                         return t;
@@ -109,7 +115,7 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
                 }
             }
             try {
-                if (this.mutex.getQueueLength()>0){
+                if (this.mutex.hasQueuedThreads()) {
                     this.mutex.release();
                     try {
                         Thread.sleep(2);
@@ -125,7 +131,7 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
     }
 
     @Override
-    public Tuple tryTake(Tuple template) throws RemoteException {
+    public Tuple tryTake(Tuple template) {
         synchronized(listeTuples) {
             for (Tuple t : this.listeTuples) {
                 if (t.matches(template)) {
@@ -138,7 +144,7 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
     }
 
     @Override
-    public Tuple tryRead(Tuple template) throws RemoteException {
+    public Tuple tryRead(Tuple template) {
         synchronized(listeTuples) {
             for (Tuple t : this.listeTuples) {
                 if (t.matches(template)) {
@@ -150,7 +156,7 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
     }
 
     @Override
-    public Collection<Tuple> takeAll(Tuple template) throws RemoteException{
+    public Collection<Tuple> takeAll(Tuple template) {
         LinkedList<Tuple> l = new LinkedList<>();
         Tuple tuple = tryTake(template);
         while(tuple!=null){
@@ -161,7 +167,7 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
     }
 
     @Override
-    public Collection<Tuple> readAll(Tuple template) throws RemoteException {
+    public Collection<Tuple> readAll(Tuple template) {
         LinkedList<Tuple> l = new LinkedList<>();
         synchronized(listeTuples) {
             for (Tuple t : this.listeTuples) {
@@ -174,47 +180,82 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
     }
 
     @Override
-    public void eventRegister(eventMode mode, eventTiming timing, Tuple template, Callback callback) throws RemoteException {
+    public void eventRegister(eventMode mode, eventTiming timing, Tuple template, Callback2 callback) {
         if (timing == eventTiming.IMMEDIATE) {
             if (mode == eventMode.READ) {
                 Tuple t = this.tryRead(template);
                 if (t != null) {
                     callback.call(t);
                 } else {
-                    this.callbackRead.get(template).add(callback);
+                    synchronized(this.callbackRead) {    
+                        if (this.callbackRead.get(template) == null) {
+                            List<Callback> l = new LinkedList<>();
+                            l.add(callback);
+                            this.callbackRead.put(template, l);
+                        } else {
+                            this.callbackRead.get(template).add(callback);
+                        }
+                    }
                 }
             } else {
                 Tuple t = this.tryTake(template);
                 if (t != null) {
                     callback.call(t);
                 } else {
-                    this.callbackTake.get(template).add(callback);
+                    synchronized(this.callbackTake) {  
+                        if (this.callbackTake.get(template) == null) {
+                            List<Callback> l = new LinkedList<>();
+                            l.add(callback);
+                            this.callbackTake.put(template, l);
+                        } else {
+                            this.callbackTake.get(template).add(callback);
+                        }
+                    }
                 }
             }
         } else {
             if (mode == eventMode.READ) {
-                this.callbackRead.get(template).add(callback);
+                synchronized(this.callbackRead) {  
+                    if (this.callbackRead.get(template) == null) {
+                        List<Callback> l = new LinkedList<>();
+                        l.add(callback);
+                        this.callbackRead.put(template, l);
+                    } else {
+                        this.callbackRead.get(template).add(callback);
+                    }
+                }
             } else {
-                this.callbackTake.get(template).add(callback);
+                synchronized(this.callbackTake) {  
+                    if (this.callbackTake.get(template) == null) {
+                        List<Callback> l = new LinkedList<>();
+                        l.add(callback);
+                        this.callbackTake.put(template, l);
+                    } else {
+                        this.callbackTake.get(template).add(callback);
+                    }
+                }
             }
         }
     }
 
     @Override
-    public void debug(String prefix) throws RemoteException {
-        // TODO Auto-generated method stub
-        
+    public void debug(String prefix) {
+        System.out.println(prefix);        
     }
 
 
-    public static void main(String[] args) throws RemoteException {
+    public static void main(String[] args) {
         try {
             new LindaServer(args[0]);
-        } catch (RemoteException | MalformedURLException e) {
+        } catch (RemoteException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (MalformedURLException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        while (true) {
+        while(true) {
+            
         }
     }
 }

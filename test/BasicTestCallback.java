@@ -23,8 +23,8 @@ public class BasicTestCallback {
     }
 
     public static void main(String[] a) {
-        linda = new linda.shm.CentralizedLinda();
-        // linda = new linda.server.LindaClient("//localhost:4000/MonServeur");
+        //linda = new linda.shm.CentralizedLinda();
+        linda = new linda.server.LindaClient("//localhost:4000/MonServeur");
 
         Tuple t0 = new Tuple(4, "foo");
         System.out.println("(2) write: " + t0);
