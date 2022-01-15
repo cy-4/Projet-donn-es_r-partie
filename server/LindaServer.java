@@ -13,16 +13,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 
-import linda.Callback;
 import linda.Tuple;
 import linda.Linda.eventMode;
 import linda.Linda.eventTiming;
 
-public class LindaServer extends UnicastRemoteObject implements LindaReparti {
+public class LindaServer extends UnicastRemoteObject implements LindaReparti{
     
     private List<Tuple> listeTuples;
-    private Map<Tuple, List<Callback>> callbackRead;
-    private Map<Tuple, List<Callback>> callbackTake;
+    private Map<Tuple, List<CallbackRemote>> callbackRead;
+    private Map<Tuple, List<CallbackRemote>> callbackTake;
     private Semaphore mutex;
 
     public LindaServer(String serveurUrl) throws RemoteException, MalformedURLException {
@@ -32,18 +31,19 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
         this.callbackTake = Collections.synchronizedMap(new HashMap<>());
         this.listeTuples = Collections.synchronizedList(new LinkedList<>());
         this.mutex = new Semaphore(0);
+        System.out.println("Serveur lancé");
     }
 
 
     @Override
-    public void write(Tuple t) {
+    public void write(Tuple t) throws RemoteException {
         synchronized(this.listeTuples) {
             this.listeTuples.add(t);
         }
         synchronized(this.callbackRead) {
             for (Tuple template : this.callbackRead.keySet()) {
                 if (t.matches(template)){
-                    for (Callback cb : this.callbackRead.get(template)) {
+                    for (CallbackRemote cb : this.callbackRead.get(template)) {
                         Tuple t2 = this.tryRead(template);
                         if (t2 != null) {
                             cb.call(t2);
@@ -56,7 +56,7 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
         synchronized(this.callbackTake) {
             for (Tuple template : this.callbackTake.keySet()) {
                 if (t.matches(template)){
-                    for (Callback cb : this.callbackTake.get(template)) {
+                    for (CallbackRemote cb : this.callbackTake.get(template)) {
                         Tuple t2 = this.tryTake(template);
                         if (t2 != null) {
                             cb.call(t2);
@@ -180,7 +180,7 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
     }
 
     @Override
-    public void eventRegister(eventMode mode, eventTiming timing, Tuple template, Callback2 callback) {
+    public void eventRegister(eventMode mode, eventTiming timing, Tuple template, CallbackRemote callback) throws RemoteException {
         if (timing == eventTiming.IMMEDIATE) {
             if (mode == eventMode.READ) {
                 Tuple t = this.tryRead(template);
@@ -189,7 +189,7 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
                 } else {
                     synchronized(this.callbackRead) {    
                         if (this.callbackRead.get(template) == null) {
-                            List<Callback> l = new LinkedList<>();
+                            List<CallbackRemote> l = new LinkedList<>();
                             l.add(callback);
                             this.callbackRead.put(template, l);
                         } else {
@@ -204,7 +204,7 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
                 } else {
                     synchronized(this.callbackTake) {  
                         if (this.callbackTake.get(template) == null) {
-                            List<Callback> l = new LinkedList<>();
+                            List<CallbackRemote> l = new LinkedList<>();
                             l.add(callback);
                             this.callbackTake.put(template, l);
                         } else {
@@ -217,7 +217,7 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
             if (mode == eventMode.READ) {
                 synchronized(this.callbackRead) {  
                     if (this.callbackRead.get(template) == null) {
-                        List<Callback> l = new LinkedList<>();
+                        List<CallbackRemote> l = new LinkedList<>();
                         l.add(callback);
                         this.callbackRead.put(template, l);
                     } else {
@@ -227,7 +227,7 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti {
             } else {
                 synchronized(this.callbackTake) {  
                     if (this.callbackTake.get(template) == null) {
-                        List<Callback> l = new LinkedList<>();
+                        List<CallbackRemote> l = new LinkedList<>();
                         l.add(callback);
                         this.callbackTake.put(template, l);
                     } else {

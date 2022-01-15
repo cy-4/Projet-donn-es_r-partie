@@ -1,6 +1,8 @@
 
 package linda.test;
 
+import java.rmi.RemoteException;
+
 import linda.*;
 import linda.Linda.eventMode;
 import linda.Linda.eventTiming;
@@ -22,7 +24,7 @@ public class BasicTestCallback {
         }
     }
 
-    public static void main(String[] a) {
+    public static void main(String[] a) throws RemoteException {
         //linda = new linda.shm.CentralizedLinda();
         linda = new linda.server.LindaClient("//localhost:4000/MonServeur");
 

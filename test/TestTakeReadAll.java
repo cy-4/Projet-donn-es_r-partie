@@ -2,14 +2,16 @@ package linda.test;
 
 import linda.shm.*;
 import linda.*;
+
+import java.rmi.RemoteException;
 import java.util.Collection;
 
 public class TestTakeReadAll {
 
-    public static void main(String[] a) {
+    public static void main(String[] a) throws RemoteException {
                 
-        final Linda linda = new linda.shm.CentralizedLinda();
-        // final Linda linda = new linda.server.LindaClient("//localhost:4000/aaa");
+        //final Linda linda = new linda.shm.CentralizedLinda();
+        final Linda linda = new linda.server.LindaClient("//localhost:4000/MonServeur");
                 
         new Thread() {
             public void run() {
