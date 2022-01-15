@@ -8,6 +8,8 @@ import linda.Tuple;
 
 public class Callback2 extends UnicastRemoteObject implements CallbackRemote {
 
+    private static final long serialVersionUID = 1L;
+
     public Callback cb;
 
     public Callback2(Callback callback) throws RemoteException {

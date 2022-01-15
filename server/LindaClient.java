@@ -18,6 +18,7 @@ public class LindaClient extends UnicastRemoteObject implements Linda, CallbackR
 	
     private LindaReparti serveur;
     private Callback cb;
+    private static final long serialVersionUID = 1L;
 
     /** Initializes the Linda implementation.
      *  @param serverURI the URI of the server, e.g. "rmi://localhost:4000/LindaServer" or "//localhost:4000/LindaServer".
@@ -27,7 +28,6 @@ public class LindaClient extends UnicastRemoteObject implements Linda, CallbackR
             this.serveur = (LindaReparti) Naming.lookup(serverURI);
             System.out.println("Client connecté");
         } catch (MalformedURLException | RemoteException | NotBoundException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
@@ -37,7 +37,6 @@ public class LindaClient extends UnicastRemoteObject implements Linda, CallbackR
         try {
             this.serveur.write(t);
         } catch (RemoteException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
@@ -47,7 +46,6 @@ public class LindaClient extends UnicastRemoteObject implements Linda, CallbackR
         try {
             return this.serveur.take(template);
         } catch (RemoteException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         return null;
@@ -58,7 +56,6 @@ public class LindaClient extends UnicastRemoteObject implements Linda, CallbackR
         try {
             return this.serveur.read(template);
         } catch (RemoteException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         return null;
@@ -69,7 +66,6 @@ public class LindaClient extends UnicastRemoteObject implements Linda, CallbackR
         try {
             return this.serveur.tryTake(template);
         } catch (RemoteException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         return null;
@@ -80,7 +76,6 @@ public class LindaClient extends UnicastRemoteObject implements Linda, CallbackR
         try {
             return this.serveur.tryRead(template);
         } catch (RemoteException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         return null;
@@ -91,7 +86,6 @@ public class LindaClient extends UnicastRemoteObject implements Linda, CallbackR
         try {
             return this.serveur.takeAll(template);
         } catch (RemoteException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         return null;
@@ -102,7 +96,6 @@ public class LindaClient extends UnicastRemoteObject implements Linda, CallbackR
         try {
             return this.serveur.readAll(template);
         } catch (RemoteException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         return null;
@@ -114,7 +107,6 @@ public class LindaClient extends UnicastRemoteObject implements Linda, CallbackR
             this.cb = callback;
             this.serveur.eventRegister(mode, timing, template, this);
         } catch (RemoteException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
@@ -124,7 +116,6 @@ public class LindaClient extends UnicastRemoteObject implements Linda, CallbackR
         try {
             this.serveur.debug(prefix);
         } catch (RemoteException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }        
     }
@@ -134,14 +125,5 @@ public class LindaClient extends UnicastRemoteObject implements Linda, CallbackR
         this.cb.call(t);
     }
 
-    public static void main(String[] args) {
-        try {
-            new LindaClient(args[0]);
-        } catch (RemoteException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        while (true) {}
-    }
 
 }

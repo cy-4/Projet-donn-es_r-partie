@@ -23,6 +23,7 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti{
     private Map<Tuple, List<CallbackRemote>> callbackRead;
     private Map<Tuple, List<CallbackRemote>> callbackTake;
     private Semaphore mutex;
+    private static final long serialVersionUID = 1L;
 
     public LindaServer(String serveurUrl) throws RemoteException, MalformedURLException {
         LocateRegistry.createRegistry(4000);

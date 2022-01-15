@@ -7,8 +7,8 @@ import linda.*;
 public class TestRead {
 
     public static void main(String[] a) throws RemoteException {
-        //final Linda linda = new linda.shm.CentralizedLinda();
-        final Linda linda = new linda.server.LindaClient("//localhost:4000/MonServeur");
+        final Linda linda = new linda.shm.CentralizedLinda();
+        //final Linda linda = new linda.server.LindaClient("//localhost:4000/MonServeur");
                 
         for (int i = 1; i <= 3; i++) {
             final int j = i;
