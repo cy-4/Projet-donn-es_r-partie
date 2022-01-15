@@ -1,3 +1,4 @@
+package linda.server;
 import linda.server.LindaServer;
 import java.net.MalformedURLException;
 import java.rmi.Naming;
