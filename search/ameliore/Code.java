@@ -4,5 +4,5 @@ public enum Code {
     Value,   // Value, String
     Result,   // Result, UUID, String, Int
     Searcher, // Result, "done", UUID
-    Finished,
+    Finished, 
 }

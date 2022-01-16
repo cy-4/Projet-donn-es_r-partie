@@ -105,6 +105,7 @@ public class LindaClient extends UnicastRemoteObject implements Linda, CallbackR
     public void eventRegister(eventMode mode, eventTiming timing, Tuple template, Callback callback) {
         try {
             this.cb = callback;
+            // On peut envoyer this car LindaClient implémente CallbackRemote
             this.serveur.eventRegister(mode, timing, template, this);
         } catch (RemoteException e) {
             e.printStackTrace();

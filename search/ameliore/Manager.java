@@ -60,10 +60,13 @@ public class Manager implements Runnable {
     }
 
     public void run() {
+        // Tous les Managers attends la fin du précédent pour commencer à écrire puis demander leur queries
         if (numqueries!=0){
+            // On attend l'information de la fin du précédent
             lindacommunicaction.read(new Tuple(Code.Finished, this.numqueries-1));
             try {
-                Thread.sleep(2000);
+                // On attend un peu pour s'assurer que les autres searcher squitte la recherche de la queries précédentes
+                Thread.sleep(20);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

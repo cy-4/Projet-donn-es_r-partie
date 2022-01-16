@@ -37,7 +37,7 @@ public class Searcher implements Runnable {
                     requete_tjr_en_cours = lindacommunicaction.tryRead(new Tuple(Code.Request, numqueries, req))!=null;
                 }
             }
-            if (!requete_tjr_en_cours || dist == 0){
+            if (requete_tjr_en_cours){
                 lindacommunicaction.write(new Tuple(Code.Searcher, "done", numqueries));
             }
         }
