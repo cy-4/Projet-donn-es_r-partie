@@ -8,18 +8,20 @@ public class Searcher implements Runnable {
 
     private Linda lindamots,lindacommunicaction;
     private int nbchercheur;
+    private int nbqueries;
 
-    public Searcher(Linda lindamots,Linda lindacommunicaction,int nbchercheur) {
+    public Searcher(Linda lindamots,Linda lindacommunicaction,int nbchercheur,int nbqueries) {
         this.lindamots = lindamots;
         this.lindacommunicaction = lindacommunicaction;
         this.nbchercheur = nbchercheur +1;
+        this.nbqueries = nbqueries;
     }
 
     public void run() {
         System.out.println("Searcher "+nbchercheur+" ready to do a search");
-        Tuple treq = lindacommunicaction.read(new Tuple(Code.Request, UUID.class, String.class));
-        while(treq!=null){        
-            UUID reqUUID = (UUID)treq.get(1);
+        for (int i=0; i<nbqueries; i++){
+            Tuple treq = lindacommunicaction.read(new Tuple(Code.Request, i, String.class));     
+            int numqueries = (Integer) treq.get(1);
             String req = (String) treq.get(2);
             Tuple tv;
             System.out.println("Searcher "+nbchercheur+" looking for: " + req);
@@ -31,16 +33,15 @@ public class Searcher implements Runnable {
                 String val = (String) tv.get(1);
                 dist = getLevenshteinDistance(req, val);
                 if (dist < 10) { // arbitrary
-                    lindamots.write(new Tuple(Code.Result, reqUUID, val, dist));
+                    lindamots.write(new Tuple(Code.Result, numqueries, val, dist));
                 }
-                if ((nbmotlut)%20==0){
-                    requete_tjr_en_cours = lindacommunicaction.tryRead(new Tuple(Code.Request, reqUUID, req))!=null;
+                if ((nbmotlut)%10==0){
+                    requete_tjr_en_cours = lindacommunicaction.tryRead(new Tuple(Code.Request, numqueries, req))!=null;
                 }
             }
             if (requete_tjr_en_cours){
-                lindacommunicaction.write(new Tuple(Code.Searcher, "done", reqUUID));
+                lindacommunicaction.write(new Tuple(Code.Searcher, "done", numqueries));
             }
-            treq = lindacommunicaction.tryRead(new Tuple(Code.Request, UUID.class, String.class));
         }
     }
     

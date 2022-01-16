@@ -14,18 +14,13 @@ public class Main {
         Linda lindamots = new linda.shm.CentralizedLinda();
         Linda lindacommunicaction = new linda.shm.CentralizedLinda();
 
-        try (Stream<String> stream = Files.lines(Paths.get(args[0]))) {
-            stream.limit(100000).forEach(s -> lindamots.write(new Tuple(Code.Value, s.trim())));
-        } catch (java.io.IOException e) {
-            e.printStackTrace();
-        }
         for (int j=0; j<=(args.length-3); j++){
-            Manager manager = new Manager(lindamots,lindacommunicaction,args[j+2]);
+            Manager manager = new Manager(lindamots,lindacommunicaction,args[j+2],args[0],j);
             (new Thread(manager)).start();
         }
                
         for (int i=0; i<Integer.valueOf(args[1]); i++){
-            Searcher searcher = new Searcher(lindamots,lindacommunicaction,i);
+            Searcher searcher = new Searcher(lindamots,lindacommunicaction,i,args.length-2);
             (new Thread(searcher)).start();
         }
         

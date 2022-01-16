@@ -12,29 +12,41 @@ public class Manager implements Runnable {
 
     private Linda lindamots,lindacommunicaction;
 
-    private UUID reqUUID;
     private String search;
     private int bestvalue = Integer.MAX_VALUE; // lower is better
     private String bestresult;
+    private String pathname;
+    private int numqueries;
+    
 
-    public Manager(Linda lindamots,Linda lindacommunicaction, String search) {
+    public Manager(Linda lindamots,Linda lindacommunicaction, String search, String pathname,int numqueries) {
         this.lindamots = lindamots;
         this.lindacommunicaction = lindacommunicaction;
         this.search = search;
+        this.pathname = pathname;
+        this.numqueries = numqueries;
     }
 
     private void addSearch(String search) {
         this.search = search;
-        this.reqUUID = UUID.randomUUID();
-        System.out.println("Search " + this.reqUUID + " for " + this.search);
-        lindamots.eventRegister(Linda.eventMode.TAKE, Linda.eventTiming.IMMEDIATE, new Tuple(Code.Result, this.reqUUID, String.class, Integer.class), new CbGetResult());
-        lindacommunicaction.write(new Tuple(Code.Request, this.reqUUID, this.search));
+        System.out.println("Manager " + this.numqueries + " querie for " + this.search);
+        lindamots.eventRegister(Linda.eventMode.TAKE, Linda.eventTiming.IMMEDIATE, new Tuple(Code.Result,this.numqueries, String.class, Integer.class), new CbGetResult());
+        lindacommunicaction.write(new Tuple(Code.Request, this.numqueries, this.search));
     }
 
     private void waitForEndSearch() {
-        lindacommunicaction.take(new Tuple(Code.Searcher, "done", this.reqUUID));
-        lindacommunicaction.take(new Tuple(Code.Request, this.reqUUID, String.class)); // remove query
+        lindacommunicaction.take(new Tuple(Code.Searcher, "done", this.numqueries));
+        lindacommunicaction.take(new Tuple(Code.Request, this.numqueries, String.class)); // remove query
+        lindacommunicaction.write(new Tuple(Code.Finished, this.numqueries)); // remove query
         System.out.println("query done");
+    }
+
+    private void loadData(String pathname) {
+        try (Stream<String> stream = Files.lines(Paths.get(pathname))) {
+            stream.limit(10000).forEach(s -> lindamots.write(new Tuple(Code.Value, s.trim())));
+        } catch (java.io.IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private class CbGetResult implements linda.Callback {
@@ -46,11 +58,20 @@ public class Manager implements Runnable {
                 bestresult = s;
                 System.out.println("New best (" + bestvalue + "): \"" + bestresult + "\"");
             }
-            lindamots.eventRegister(Linda.eventMode.TAKE, Linda.eventTiming.IMMEDIATE, new Tuple(Code.Result, reqUUID, String.class, Integer.class), this);
+            lindamots.eventRegister(Linda.eventMode.TAKE, Linda.eventTiming.IMMEDIATE, new Tuple(Code.Result,numqueries, String.class, Integer.class), this);
         }
     }
 
     public void run() {
+        if (numqueries!=0){
+            lindacommunicaction.read(new Tuple(Code.Finished, this.numqueries-1));
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        this.loadData(pathname);
         this.addSearch(search);
         this.waitForEndSearch();
     }
