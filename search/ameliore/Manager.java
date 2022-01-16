@@ -64,6 +64,7 @@ public class Manager implements Runnable {
         if (numqueries!=0){
             // On attend l'information de la fin du précédent
             lindacommunicaction.read(new Tuple(Code.Finished, this.numqueries-1));
+            lindamots.takeAll(new Tuple(Code.Value, String.class));
             try {
                 // On attend un peu pour s'assurer que les autres searcher squitte la recherche de la queries précédentes
                 Thread.sleep(20);

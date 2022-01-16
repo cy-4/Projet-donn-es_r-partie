@@ -76,13 +76,17 @@ public class CentralizedLinda implements Linda {
                     // On prend le premier Callback
                     Callback cb = lcb.get(0);
                     // On enleve le t qu'on vient de rajouter
-                    take(t);
-                    // On le supprime de la liste des Callback
-                    synchronized(this.callbackTake) {
-                        this.callbackTake.get(template).remove(cb);
+                    if (this.tryTake(t) != null) {
+                        synchronized(this.listeTuples) {
+                            this.listeTuples.remove(t);
+                        }
+                        // On le supprime de la liste des Callback
+                        synchronized(this.callbackTake) {
+                            this.callbackTake.get(template).remove(cb);
+                        }
+                        // On l'appelle avec t
+                        cb.call(t);
                     }
-                    // On l'appelle avec t
-                    cb.call(t);
                     break;
                 }
             }
@@ -118,7 +122,7 @@ public class CentralizedLinda implements Linda {
                     // On met un sleep, pour qu'il évite de reprendre le mutex qu'il a libéré
                     // ce qui entrainerai une boucle infinie
                     try {
-                        Thread.sleep(10);
+                        Thread.sleep(2);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
