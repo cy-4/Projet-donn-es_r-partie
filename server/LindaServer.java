@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Semaphore;
 
 import linda.Tuple;
@@ -26,7 +27,9 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti{
     private static final long serialVersionUID = 1L;
 
     public LindaServer(String serveurUrl) throws RemoteException, MalformedURLException {
-        LocateRegistry.createRegistry(4000);
+        try {
+            LocateRegistry.createRegistry(4000);
+        } catch (Exception e) {}
         Naming.rebind(serveurUrl, this);
         this.callbackRead = Collections.synchronizedMap(new HashMap<>());
         this.callbackTake = Collections.synchronizedMap(new HashMap<>());
@@ -41,28 +44,43 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti{
         synchronized(this.listeTuples) {
             this.listeTuples.add(t);
         }
+        Set<Tuple> lt;
+        List<CallbackRemote> lcb;
+        Tuple t2;
         synchronized(this.callbackRead) {
-            for (Tuple template : this.callbackRead.keySet()) {
-                if (t.matches(template)){
-                    for (CallbackRemote cb : this.callbackRead.get(template)) {
-                        Tuple t2 = this.tryRead(template);
-                        if (t2 != null) {
-                            cb.call(t2);
+            lt = this.callbackRead.keySet();
+        }
+        for (Tuple template : lt) {
+            if (t.matches(template)){
+                synchronized(this.callbackRead) {
+                    lcb = this.callbackRead.get(template);
+                }
+                for (CallbackRemote cb : lcb) {
+                    t2 = this.tryRead(template);
+                    if (t2 != null) {
+                        synchronized(this.callbackRead) {
                             this.callbackRead.get(template).remove(cb);
                         }
+                        cb.call(t2);
                     }
                 }
             }
         }
         synchronized(this.callbackTake) {
-            for (Tuple template : this.callbackTake.keySet()) {
-                if (t.matches(template)){
-                    for (CallbackRemote cb : this.callbackTake.get(template)) {
-                        Tuple t2 = this.tryTake(template);
-                        if (t2 != null) {
-                            cb.call(t2);
+            lt = this.callbackTake.keySet();
+        }
+        for (Tuple template : lt) {
+            if (t.matches(template)){
+                synchronized(this.callbackTake) {
+                    lcb = this.callbackTake.get(template);
+                }
+                for (CallbackRemote cb : lcb) {
+                    t2 = this.tryRead(template);
+                    if (t2 != null) {
+                        synchronized(this.callbackTake) {
                             this.callbackTake.get(template).remove(cb);
                         }
+                        cb.call(t2);
                     }
                 }
             }
@@ -249,14 +267,11 @@ public class LindaServer extends UnicastRemoteObject implements LindaReparti{
         try {
             new LindaServer(args[0]);
         } catch (RemoteException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (MalformedURLException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         while(true) {
-            
         }
     }
 }

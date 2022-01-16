@@ -1,8 +1,5 @@
 package linda.search.ameliore;
 
-import java.util.UUID;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.stream.Stream;
 import java.nio.file.Files;
 import java.nio.file.Paths;

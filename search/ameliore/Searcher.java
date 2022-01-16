@@ -2,8 +2,6 @@ package linda.search.ameliore;
 
 import linda.*;
 import java.util.Arrays;
-import java.util.UUID;
-
 public class Searcher implements Runnable {
 
     private Linda lindamots,lindacommunicaction;
@@ -28,7 +26,7 @@ public class Searcher implements Runnable {
             int dist = 15; // arbitraire
             int nbmotlut = 0;
             Boolean requete_tjr_en_cours = true; 
-            while ((tv = lindamots.tryTake(new Tuple(Code.Value, String.class))) != null & (dist!=0) & requete_tjr_en_cours) {
+            while ((tv = lindamots.tryTake(new Tuple(Code.Value, String.class))) != null && (dist!=0) && requete_tjr_en_cours) {
                 nbmotlut++;
                 String val = (String) tv.get(1);
                 dist = getLevenshteinDistance(req, val);
@@ -39,7 +37,7 @@ public class Searcher implements Runnable {
                     requete_tjr_en_cours = lindacommunicaction.tryRead(new Tuple(Code.Request, numqueries, req))!=null;
                 }
             }
-            if (requete_tjr_en_cours){
+            if (!requete_tjr_en_cours || dist == 0){
                 lindacommunicaction.write(new Tuple(Code.Searcher, "done", numqueries));
             }
         }
